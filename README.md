@@ -1,6 +1,14 @@
 # RDF
 
-Radio Direction Finder plugin for [EuroScope](https://www.euroscope.hu). Still actively maintained.
+Radio Direction Finder plugin for [EuroScope](https://www.euroscope.hu).
+
+## Modifications
+This is a modified version of the original RDF Plugin by Kingfu Chan, adapted for use in the VATSIM Germany Langen FIR package by Ben Böckmann. The modifications include:
+- Changed default configuration settings
+- Added predefined styles for Langen operations
+- Added support to toggle RDF
+
+All modifications are released under the same GPLv3 license as the original work.
 
 ## *TrackAudio* & *Audio for VATSIM Standalone Client* Support
 
@@ -150,14 +158,6 @@ When an ASR is opened, the plugin will use the configurations in the sequence of
 + When using professional correlation mode (S or C) in EuroScope, it's possible some aircraft won't be radio-direction-found because the plugin doesn't know the callsign for an uncorrelated radar target.
 + For dual pilot situation where the transmitting pilot logs in as observer, this plugin will try to drop the last character of the observer callsign and find again if this dropped character is between A-Z. This feature may cause inaccurate radio-direction.
 + Because of new drawing behaviour introduced after *EuroScope v3.2.3*, switching between ASRs may not change the plugin drawing configurations. In such case, simply pan/zoom your view to update configurations per ASR.
-
-## Modifications
-This is a modified version of the original RDF Plugin by Kingfu Chan, adapted for use in the VATSIM Germany Langen FIR package by Ben Böckmann. The modifications include:
-- Changed default configuration settings
-- Added predefined styles for Langen operations
-- Added support to toggle RDF
-
-All modifications are released under the same GPLv3 license as the original work.
 
 ## Credits
 
