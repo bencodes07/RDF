@@ -151,6 +151,14 @@ When an ASR is opened, the plugin will use the configurations in the sequence of
 + For dual pilot situation where the transmitting pilot logs in as observer, this plugin will try to drop the last character of the observer callsign and find again if this dropped character is between A-Z. This feature may cause inaccurate radio-direction.
 + Because of new drawing behaviour introduced after *EuroScope v3.2.3*, switching between ASRs may not change the plugin drawing configurations. In such case, simply pan/zoom your view to update configurations per ASR.
 
+## Modifications
+This is a modified version of the original RDF Plugin by Kingfu Chan, adapted for use in the VATSIM Germany Langen FIR package by Ben Böckmann. The modifications include:
+- Changed default configuration settings
+- Added predefined styles for Langen operations
+- Added support to toggle RDF
+
+All modifications are released under the same GPLv3 license as the original work.
+
 ## Credits
 
 + [pierr3/VectorAudio](https://github.com/pierr3/VectorAudio) & [pierr3/TrackAudio](https://github.com/pierr3/TrackAudio): initiative.
