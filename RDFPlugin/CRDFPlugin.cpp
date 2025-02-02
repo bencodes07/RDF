@@ -16,6 +16,9 @@ CRDFPlugin::CRDFPlugin()
 	TCHAR pBuffer[MAX_PATH] = { 0 };
 	DWORD moduleNameRes = GetModuleFileName(pluginModule, pBuffer, sizeof(pBuffer) / sizeof(TCHAR) - 1);
 	std::filesystem::path dllPath = moduleNameRes != 0 ? pBuffer : "";
+
+	styleManager = std::make_unique<StyleManager>(dllPath);
+
 	auto logPath = dllPath.parent_path() / "RDFPlugin.log";
 	static plog::RollingFileAppender<plog::TxtFormatterUtcTime> rollingAppender(logPath.c_str(), 1000000, 1); // 1 MB of 1 file
 #ifdef _DEBUG
@@ -208,6 +211,55 @@ auto CRDFPlugin::LoadTrackAudioSettings(void) -> void
 	PLOGD << "loading TrackAudio settings";
 	addressTrackAudio = "127.0.0.1:49080";
 	modeTrackAudio = 1;
+
+	// Reload the styles
+	styleManager->LoadStyles();
+
+	// Apply default style after reloading
+	const rdf_style* defaultStyle = styleManager->GetDefaultStyle();
+	if (defaultStyle) {
+		std::unique_lock lock(mtxScreen);
+
+		// First apply to plugin settings (ID -1)
+		if (setScreen.find(-1) == setScreen.end()) {
+			setScreen[-1] = std::make_shared<draw_settings>();
+		}
+
+		// Then apply to all screens
+		for (auto& screen : vecScreen) {
+			if (setScreen.find(screen->m_ID) == setScreen.end()) {
+				setScreen[screen->m_ID] = std::make_shared<draw_settings>();
+			}
+
+			// Apply settings to this screen
+			auto& settings = setScreen[screen->m_ID];
+			settings->circleRadius = defaultStyle->circleRadius;
+			settings->circlePrecision = defaultStyle->circlePrecision;
+			settings->circleThreshold = defaultStyle->circleThreshold;
+			settings->lowAltitude = defaultStyle->lowAltitude;
+			settings->highAltitude = defaultStyle->highAltitude;
+			settings->lowPrecision = defaultStyle->lowPrecision;
+			settings->highPrecision = defaultStyle->highPrecision;
+
+			COLORREF rgb;
+			GetRGB(rgb, defaultStyle->rdfRGB);
+			settings->rdfRGB = rgb;
+			GetRGB(rgb, defaultStyle->rdfConcurRGB);
+			settings->rdfConcurRGB = rgb;
+
+			settings->drawController = defaultStyle->drawController;
+
+			// Save to ASR if needed
+			if (screen->m_ID != -1) {
+				screen->AddAsrDataToBeSaved(SETTING_STYLE, "Style", defaultStyle->name.c_str());
+			}
+		}
+
+		auto imsg = std::format("RDF Style changed to {} (default)", defaultStyle->name);
+		PLOGI << imsg;
+		DisplayInfoMessage(imsg);
+	}
+
 	try {
 		const char* cstrEndpoint = GetDataFromSettings(SETTING_ENDPOINT);
 		if (cstrEndpoint != nullptr) {
@@ -407,12 +459,11 @@ auto CRDFPlugin::ProcessDrawingCommand(const std::string& command, const int& sc
 			std::string styleName = styleMatch[1];
 			std::transform(styleName.begin(), styleName.end(), styleName.begin(), ::toupper);
 
-			auto styleIt = RDF_STYLES.find(styleName);
-			if (styleIt != RDF_STYLES.end()) {
+			const rdf_style* style = styleManager->GetStyle(styleName);
+			if (style) {
 				std::unique_lock lock(mtxScreen);
-				const auto& style = styleIt->second;
 
-				// Ensure screen settings exist
+				// Initialize settings if needed
 				if (setScreen.find(screenID) == setScreen.end()) {
 					setScreen[screenID] = std::make_shared<draw_settings>();
 				}
@@ -420,27 +471,27 @@ auto CRDFPlugin::ProcessDrawingCommand(const std::string& command, const int& sc
 				auto& settings = setScreen[screenID];
 
 				// Apply all style settings
-				settings->circleRadius = style.circleRadius;
-				settings->circlePrecision = style.circlePrecision;
-				settings->circleThreshold = style.circleThreshold;
-				settings->lowAltitude = style.lowAltitude;
-				settings->highAltitude = style.highAltitude;
-				settings->lowPrecision = style.lowPrecision;
-				settings->highPrecision = style.highPrecision;
+				settings->circleRadius = style->circleRadius;
+				settings->circlePrecision = style->circlePrecision;
+				settings->circleThreshold = style->circleThreshold;
+				settings->lowAltitude = style->lowAltitude;
+				settings->highAltitude = style->highAltitude;
+				settings->lowPrecision = style->lowPrecision;
+				settings->highPrecision = style->highPrecision;
 
 				// Convert RGB strings to COLORREF
 				COLORREF rgb;
-				GetRGB(rgb, style.rdfRGB);
+				GetRGB(rgb, style->rdfRGB);
 				settings->rdfRGB = rgb;
-				GetRGB(rgb, style.rdfConcurRGB);
+				GetRGB(rgb, style->rdfConcurRGB);
 				settings->rdfConcurRGB = rgb;
 
-				settings->drawController = style.drawController;
+				settings->drawController = style->drawController;
 
 				// Save settings
-				SaveSetting(SETTING_STYLE, "Style", style.name.c_str());
+				SaveSetting(SETTING_STYLE, "Style", style->name.c_str());
 
-				auto imsg = std::format("RDF Style changed to {}", style.name);
+				auto imsg = std::format("RDF Style changed to {}", style->name);
 				PLOGI << imsg;
 				DisplayInfoMessage(imsg);
 				return true;

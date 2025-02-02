@@ -3,6 +3,8 @@
 #include "stdafx.h"
 #include "HiddenWindow.h"
 #include "CRDFScreen.h"
+#include "RDFStyles.h"
+#include <memory>
 
 // Plugin info
 constexpr auto MY_PLUGIN_NAME = "RDF Plugin for Euroscope";
@@ -31,6 +33,9 @@ constexpr auto SETTING_HIGH_PRECISION = "HighPrecision";
 constexpr auto SETTING_DRAW_CONTROLLERS = "DrawControllers";
 // Tag item type
 const int TAG_ITEM_TYPE_RDF_STATE = 1001; // RDF state
+
+// Styles
+constexpr auto SETTING_STYLE = "Style";
 
 // Constants
 constexpr auto UNKNOWN_ERROR_MSG = "Unknown error!";
@@ -83,18 +88,20 @@ typedef struct _draw_settings {
 	bool drawController;
 
 	_draw_settings(void) {
-		rdfRGB = RGB(114, 150, 102); // Default: green
-		rdfConcurRGB = RGB(114, 150, 102); // Default: green
-		circleRadius = 20; // Default: 20 (nautical miles or pixel), range: (0, +inf)
-		circleThreshold = -1; // Default: -1 (always use pixel)
-		circlePrecision = 0; // Default: no offset (nautical miles), range: [0, +inf)
-		lowAltitude = 0; // Default: 0 (feet)
-		lowPrecision = 0; // Default: 0 (nautical miles), range: [0, +inf)
-		highAltitude = 0; // Default: 0 (feet)
-		highPrecision = 0; // Default: 0 (nautical miles), range: [0, +inf)
+		// Initialize with zeros/nulls since real defaults will come from config
+		rdfRGB = RGB(0, 0, 0);
+		rdfConcurRGB = RGB(0, 0, 0);
+		circleRadius = 0;
+		circleThreshold = 0;
+		circlePrecision = 0;
+		lowAltitude = 0;
+		lowPrecision = 0;
+		highAltitude = 0;
+		highPrecision = 0;
 		drawController = false;
 	};
 } draw_settings;
+
 
 // Frequency & channel state
 typedef struct _freq_state {
@@ -123,55 +130,12 @@ typedef struct _es_chnl_state {
 	}
 } chnl_state;
 
-#define SETTING_STYLE "Style"
-
-struct rdf_style {
-	std::string name;
-	int circleRadius;
-	int circlePrecision;
-	int circleThreshold;
-	int lowAltitude;
-	int highAltitude;
-	int lowPrecision;
-	int highPrecision;
-	std::string rdfRGB; 
-	std::string rdfConcurRGB;
-	bool drawController;
-};
-
-static const std::map<std::string, rdf_style> RDF_STYLES = {
-	{"LANGEN", {
-		"Langen",      // name
-		20,             // circleRadius
-		0,             // circlePrecision
-		999999,        // circleThreshold
-		0,             // lowAltitude
-		0,         // highAltitude
-		10,             // lowPrecision
-		20,             // highPrecision
-		"114:150:102",  // rdfRGB
-		"114:150:102",  // rdfConcurRGB
-		false           // drawController
-	}},
-	{"RING", {
-		"Ring",        // name
-		20,            // circleRadius
-		0,             // circlePrecision
-		-1,            // circleThreshold
-		0,             // lowAltitude
-		0,         // highAltitude
-		0,             // lowPrecision
-		0,             // highPrecision
-		"114:150:102",  // rdfRGB
-		"114:150:102",  // rdfConcurRGB
-		false          // drawController
-	}}
-};
-
 class CRDFPlugin : public EuroScopePlugIn::CPlugIn
 {
 private:
 	friend class CRDFScreen;
+
+	std::unique_ptr<StyleManager> styleManager;
 
 	// screen controls and drawing params
 	std::vector<std::shared_ptr<CRDFScreen>> vecScreen; // index is screen ID (incremental int)
